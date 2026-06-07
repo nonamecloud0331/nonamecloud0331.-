@@ -151,6 +151,23 @@
             transform: scale(1.05);
         }
 
+        .btn-save {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .btn-save:hover {
+            background: #45a049;
+            transform: scale(1.05);
+        }
+
         .btn-add {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -290,14 +307,15 @@
 
         // 초기 데이터 설정
         function initializeData() {
-            let studentData = localStorage.getItem('studentData');
-            if (!studentData) {
-                const data = [
-                    { id: '2024001', name: '김철수' },
-                    { id: '2024002', name: '이영희' },
-                    { id: '2024003', name: '박민준' }
-                ];
-                localStorage.setItem('studentData', JSON.stringify(data));
+            let studentNames = localStorage.getItem('studentNames');
+            let studentIds = localStorage.getItem('studentIds');
+            
+            if (!studentNames) {
+                localStorage.setItem('studentNames', JSON.stringify(['김철수', '이영희', '박민준']));
+            }
+            
+            if (!studentIds) {
+                localStorage.setItem('studentIds', JSON.stringify(['2024001', '2024002', '2024003']));
             }
         }
 
@@ -322,24 +340,25 @@
 
         // 학생 리스트 로드
         function loadStudentLists() {
-            const studentData = JSON.parse(localStorage.getItem('studentData') || '[]');
+            const names = JSON.parse(localStorage.getItem('studentNames') || '[]');
+            const ids = JSON.parse(localStorage.getItem('studentIds') || '[]');
             
             // 이름 리스트
             const nameList = document.getElementById('nameList');
-            const names = [...new Set(studentData.map(s => s.name))];
             nameList.innerHTML = names.map((name, index) => `
                 <div class="list-item">
-                    <input type="text" value="${name}" data-type="name" data-index="${index}" onblur="saveNameChanges(${index}, this.value)">
+                    <input type="text" value="${name}" data-index="${index}" id="name-${index}">
+                    <button class="btn-save" onclick="updateName(${index})">수정</button>
                     <button class="btn-delete" onclick="deleteName(${index})">삭제</button>
                 </div>
             `).join('');
 
             // 학번 리스트
             const idList = document.getElementById('idList');
-            const ids = [...new Set(studentData.map(s => s.id))];
             idList.innerHTML = ids.map((id, index) => `
                 <div class="list-item">
-                    <input type="text" value="${id}" data-type="id" data-index="${index}" onblur="saveIdChanges(${index}, this.value)">
+                    <input type="text" value="${id}" data-index="${index}" id="id-${index}">
+                    <button class="btn-save" onclick="updateId(${index})">수정</button>
                     <button class="btn-delete" onclick="deleteId(${index})">삭제</button>
                 </div>
             `).join('');
@@ -347,8 +366,7 @@
 
         // 학생 버튼 로드
         function loadStudentButtons() {
-            const studentData = JSON.parse(localStorage.getItem('studentData') || '[]');
-            const names = [...new Set(studentData.map(s => s.name))];
+            const names = JSON.parse(localStorage.getItem('studentNames') || '[]');
             const studentButtons = document.getElementById('studentButtons');
 
             studentButtons.innerHTML = names.map((name, index) => `
@@ -443,156 +461,106 @@
 
         // 이름 추가
         function addName() {
-            const nameList = document.getElementById('nameList');
-            const newItem = document.createElement('div');
-            newItem.className = 'list-item';
-            newItem.innerHTML = `
-                <input type="text" placeholder="새 이름을 입력하세요" id="newNameInput">
-                <button class="btn-delete" onclick="saveNewName(this)">저장</button>
-            `;
-            nameList.appendChild(newItem);
-            document.getElementById('newNameInput').focus();
-        }
-
-        // 새로운 이름 저장
-        function saveNewName(button) {
-            const input = button.previousElementSibling;
-            const newName = input.value.trim();
-
-            if (!newName) {
-                alert('이름을 입력해주세요!');
-                return;
-            }
-
-            const studentData = JSON.parse(localStorage.getItem('studentData') || '[]');
-            const ids = [...new Set(studentData.map(s => s.id))];
-
-            // 새 이름을 모든 학번과 조합해서 추가
-            ids.forEach(id => {
-                studentData.push({ id, name: newName });
-            });
-
-            localStorage.setItem('studentData', JSON.stringify(studentData));
-            loadStudentLists();
-            loadStudentButtons();
-        }
-
-        // 이름 변경 저장
-        function saveNameChanges(index, newName) {
-            newName = newName.trim();
-            if (!newName) {
-                alert('이름을 입력해주세요!');
+            const names = JSON.parse(localStorage.getItem('studentNames') || '[]');
+            const newName = prompt('새로운 이름을 입력하세요:');
+            
+            if (newName && newName.trim()) {
+                names.push(newName.trim());
+                localStorage.setItem('studentNames', JSON.stringify(names));
                 loadStudentLists();
+                loadStudentButtons();
+            }
+        }
+
+        // 이름 수정
+        function updateName(index) {
+            const names = JSON.parse(localStorage.getItem('studentNames') || '[]');
+            const newValue = document.getElementById(`name-${index}`).value.trim();
+            
+            if (!newValue) {
+                alert('이름을 입력해주세요!');
                 return;
             }
 
-            const studentData = JSON.parse(localStorage.getItem('studentData') || '[]');
-            const names = [...new Set(studentData.map(s => s.name))];
             const oldName = names[index];
-
-            // 모든 항목의 이름 변경
-            studentData.forEach(student => {
-                if (student.name === oldName) {
-                    student.name = newName;
+            names[index] = newValue;
+            localStorage.setItem('studentNames', JSON.stringify(names));
+            
+            // 출석 기록의 이름도 업데이트
+            const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
+            attendanceRecords.forEach(record => {
+                if (record.name === oldName) {
+                    record.name = newValue;
                 }
             });
-
-            localStorage.setItem('studentData', JSON.stringify(studentData));
+            localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+            
             loadStudentLists();
             loadStudentButtons();
+            loadAttendanceRecords();
         }
 
         // 이름 삭제
         function deleteName(index) {
             if (!confirm('정말 삭제하시겠습니까?')) return;
 
-            const studentData = JSON.parse(localStorage.getItem('studentData') || '[]');
-            const names = [...new Set(studentData.map(s => s.name))];
+            const names = JSON.parse(localStorage.getItem('studentNames') || '[]');
             const nameToDelete = names[index];
-
-            // 해당 이름의 모든 항목 삭제
-            const filtered = studentData.filter(s => s.name !== nameToDelete);
-            localStorage.setItem('studentData', JSON.stringify(filtered));
-
+            names.splice(index, 1);
+            
+            localStorage.setItem('studentNames', JSON.stringify(names));
             loadStudentLists();
             loadStudentButtons();
         }
 
         // 학번 추가
         function addId() {
-            const idList = document.getElementById('idList');
-            const newItem = document.createElement('div');
-            newItem.className = 'list-item';
-            newItem.innerHTML = `
-                <input type="text" placeholder="새 학번을 입력하세요" id="newIdInput">
-                <button class="btn-delete" onclick="saveNewId(this)">저장</button>
-            `;
-            idList.appendChild(newItem);
-            document.getElementById('newIdInput').focus();
-        }
-
-        // 새로운 학번 저장
-        function saveNewId(button) {
-            const input = button.previousElementSibling;
-            const newId = input.value.trim();
-
-            if (!newId) {
-                alert('학번을 입력해주세요!');
-                return;
-            }
-
-            const studentData = JSON.parse(localStorage.getItem('studentData') || '[]');
-            const names = [...new Set(studentData.map(s => s.name))];
-
-            // 새 학번을 모든 이름과 조합해서 추가
-            names.forEach(name => {
-                studentData.push({ id: newId, name });
-            });
-
-            localStorage.setItem('studentData', JSON.stringify(studentData));
-            loadStudentLists();
-            loadStudentButtons();
-        }
-
-        // 학번 변경 저장
-        function saveIdChanges(index, newId) {
-            newId = newId.trim();
-            if (!newId) {
-                alert('학번을 입력해주세요!');
+            const ids = JSON.parse(localStorage.getItem('studentIds') || '[]');
+            const newId = prompt('새로운 학번을 입력하세요:');
+            
+            if (newId && newId.trim()) {
+                ids.push(newId.trim());
+                localStorage.setItem('studentIds', JSON.stringify(ids));
                 loadStudentLists();
+            }
+        }
+
+        // 학번 수정
+        function updateId(index) {
+            const ids = JSON.parse(localStorage.getItem('studentIds') || '[]');
+            const newValue = document.getElementById(`id-${index}`).value.trim();
+            
+            if (!newValue) {
+                alert('학번을 입력해주세요!');
                 return;
             }
 
-            const studentData = JSON.parse(localStorage.getItem('studentData') || '[]');
-            const ids = [...new Set(studentData.map(s => s.id))];
             const oldId = ids[index];
-
-            // 모든 항목의 학번 변경
-            studentData.forEach(student => {
-                if (student.id === oldId) {
-                    student.id = newId;
+            ids[index] = newValue;
+            localStorage.setItem('studentIds', JSON.stringify(ids));
+            
+            // 출석 기록의 학번도 업데이트
+            const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
+            attendanceRecords.forEach(record => {
+                if (record.id === oldId) {
+                    record.id = newValue;
                 }
             });
-
-            localStorage.setItem('studentData', JSON.stringify(studentData));
+            localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+            
             loadStudentLists();
-            loadStudentButtons();
+            loadAttendanceRecords();
         }
 
         // 학번 삭제
         function deleteId(index) {
             if (!confirm('정말 삭제하시겠습니까?')) return;
 
-            const studentData = JSON.parse(localStorage.getItem('studentData') || '[]');
-            const ids = [...new Set(studentData.map(s => s.id))];
-            const idToDelete = ids[index];
-
-            // 해당 학번의 모든 항목 삭제
-            const filtered = studentData.filter(s => s.id !== idToDelete);
-            localStorage.setItem('studentData', JSON.stringify(filtered));
-
+            const ids = JSON.parse(localStorage.getItem('studentIds') || '[]');
+            ids.splice(index, 1);
+            
+            localStorage.setItem('studentIds', JSON.stringify(ids));
             loadStudentLists();
-            loadStudentButtons();
         }
 
         // 로그아웃
