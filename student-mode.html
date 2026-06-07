@@ -181,29 +181,20 @@
             const idSelect = document.getElementById('studentId');
             const nameSelect = document.getElementById('studentName');
             
-            let studentData = localStorage.getItem('studentData');
-            if (!studentData) {
-                // 초기 데이터 설정
-                studentData = JSON.stringify([
-                    { id: '2024001', name: '김철수' },
-                    { id: '2024002', name: '이영희' },
-                    { id: '2024003', name: '박민준' }
-                ]);
-                localStorage.setItem('studentData', studentData);
-            }
+            // 저장된 학번과 이름 가져오기
+            const studentIds = JSON.parse(localStorage.getItem('studentIds') || '[]');
+            const studentNames = JSON.parse(localStorage.getItem('studentNames') || '[]');
 
-            const students = JSON.parse(studentData);
-            const ids = [...new Set(students.map(s => s.id))];
-            const names = [...new Set(students.map(s => s.name))];
-
-            ids.forEach(id => {
+            // 학번 드롭다운 채우기
+            studentIds.forEach(id => {
                 const option = document.createElement('option');
                 option.value = id;
                 option.textContent = id;
                 idSelect.appendChild(option);
             });
 
-            names.forEach(name => {
+            // 이름 드롭다운 채우기
+            studentNames.forEach(name => {
                 const option = document.createElement('option');
                 option.value = name;
                 option.textContent = name;
